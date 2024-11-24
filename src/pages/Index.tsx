@@ -8,6 +8,7 @@ import { FileUploader } from "@/components/FileUploader";
 import { StatusTable } from "@/components/StatusTable";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { MessageStatus } from "@/types/messages";
+import * as XLSX from 'xlsx';
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -34,8 +35,31 @@ const Index = () => {
 
   const checkNewFiles = async () => {
     console.log("Checking for new files in:", folderPath);
-    // TODO: Implement folder checking logic
     // This would typically be handled by a backend service
+  };
+
+  const processExcelFile = async (file: File) => {
+    return new Promise<MessageStatus[]>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet);
+        
+        const statuses: MessageStatus[] = rows.map((row: any) => ({
+          phoneNumber: row.phone || row.phoneNumber || row.mobile || '',
+          message: row.message || row.text || '',
+          status: 'pending',
+          timestamp: new Date().toISOString(),
+          retries: 0
+        }));
+        
+        console.log("Processed Excel data:", statuses);
+        resolve(statuses);
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const handleFileUpload = (uploadedFile: File) => {
@@ -56,34 +80,44 @@ const Index = () => {
     });
   };
 
-  const startProcessing = () => {
+  const startProcessing = async () => {
     if (!file && !folderPath) return;
     
     setIsProcessing(true);
     console.log("Starting message processing");
     
-    // Simulate message processing
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setIsProcessing(false);
+    try {
+      if (file) {
+        const statuses = await processExcelFile(file);
+        let processed = 0;
         
-        // Add a mock status for demonstration
-        const newStatus: MessageStatus = {
-          phoneNumber: "+1234567890",
-          status: "sent",
-          timestamp: new Date().toISOString(),
-          retries: 0,
-          message: "Test message",
-        };
-        
-        setMessageStatuses(prev => [...prev, newStatus]);
-        return;
+        // Process messages in batches
+        for (const status of statuses) {
+          processed++;
+          const progress = Math.round((processed / statuses.length) * 100);
+          setProgress(progress);
+          
+          // Simulate message sending (replace with actual API call)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          setMessageStatuses(prev => [...prev, {
+            ...status,
+            status: 'sent',
+            timestamp: new Date().toISOString()
+          }]);
+        }
       }
-      currentProgress += 10;
-      setProgress(currentProgress);
-    }, 1000);
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+      setProgress(100);
+    }
   };
 
   return (
