@@ -3,4 +3,5 @@ export interface MessageStatus {
   status: 'pending' | 'sent' | 'failed' | 'retry';
   timestamp: string;
   retries: number;
+  message: string;
 }
