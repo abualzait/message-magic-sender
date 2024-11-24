@@ -47,6 +47,38 @@ const Index = () => {
     });
   };
 
+  const triggerPythonScript = async (filePath: string) => {
+    try {
+      console.log("Triggering Python script for file:", filePath);
+      const response = await fetch('http://localhost:5000/send-messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filePath }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger Python script');
+      }
+
+      const result = await response.json();
+      console.log("Python script response:", result);
+      
+      toast({
+        title: "WhatsApp Processing Started",
+        description: "The Python script has been triggered to send WhatsApp messages.",
+      });
+    } catch (error) {
+      console.error("Error triggering Python script:", error);
+      toast({
+        title: "Error",
+        description: "Failed to trigger the Python script. Please run it manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFileUpload = (uploadedFile: File) => {
     console.log("File uploaded:", uploadedFile.name);
     setFile(uploadedFile);
@@ -82,15 +114,27 @@ const Index = () => {
         
         setMessageStatuses(prev => [...prev, {
           ...status,
-          status: 'pending',  // Set as pending since actual sending happens in Python
+          status: 'pending',
           timestamp: new Date().toISOString()
         }]);
       }
 
-      toast({
-        title: "Processing complete",
-        description: "Excel file has been processed. Run the Python script to send messages.",
+      // Save the file and trigger Python script
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('http://localhost:5000/upload', {
+        method: 'POST',
+        body: formData
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const { filePath } = await response.json();
+      await triggerPythonScript(filePath);
+
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
