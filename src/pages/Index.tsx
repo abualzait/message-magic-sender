@@ -22,22 +22,6 @@ const Index = () => {
     document.title = "Takamol messaging hub";
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (folderPath && !isProcessing) {
-        console.log("Checking folder for new files...");
-        checkNewFiles();
-      }
-    }, 120000); // Check every 2 minutes
-
-    return () => clearInterval(interval);
-  }, [folderPath, isProcessing]);
-
-  const checkNewFiles = async () => {
-    console.log("Checking for new files in:", folderPath);
-    // This would typically be handled by a backend service
-  };
-
   const processExcelFile = async (file: File) => {
     return new Promise<MessageStatus[]>((resolve) => {
       const reader = new FileReader();
@@ -47,10 +31,11 @@ const Index = () => {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(firstSheet);
         
+        // Match the Python backend's column names
         const statuses: MessageStatus[] = rows.map((row: any) => ({
-          phoneNumber: row.phone || row.phoneNumber || row.mobile || '',
-          message: row.message || row.text || '',
-          status: 'pending',
+          phoneNumber: row.mobile_number?.toString() || '',  // Match Python's mobile_number
+          message: row.msg_body || '',                       // Match Python's msg_body
+          status: row.status?.toLowerCase() || 'pending',
           timestamp: new Date().toISOString(),
           retries: 0
         }));
@@ -81,32 +66,31 @@ const Index = () => {
   };
 
   const startProcessing = async () => {
-    if (!file && !folderPath) return;
+    if (!file) return;
     
     setIsProcessing(true);
     console.log("Starting message processing");
     
     try {
-      if (file) {
-        const statuses = await processExcelFile(file);
-        let processed = 0;
+      const statuses = await processExcelFile(file);
+      let processed = 0;
+      
+      for (const status of statuses) {
+        processed++;
+        const progress = Math.round((processed / statuses.length) * 100);
+        setProgress(progress);
         
-        // Process messages in batches
-        for (const status of statuses) {
-          processed++;
-          const progress = Math.round((processed / statuses.length) * 100);
-          setProgress(progress);
-          
-          // Simulate message sending (replace with actual API call)
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          setMessageStatuses(prev => [...prev, {
-            ...status,
-            status: 'sent',
-            timestamp: new Date().toISOString()
-          }]);
-        }
+        setMessageStatuses(prev => [...prev, {
+          ...status,
+          status: 'pending',  // Set as pending since actual sending happens in Python
+          timestamp: new Date().toISOString()
+        }]);
       }
+
+      toast({
+        title: "Processing complete",
+        description: "Excel file has been processed. Run the Python script to send messages.",
+      });
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
@@ -139,9 +123,9 @@ const Index = () => {
                   onChange={handleFolderSelect}
                 />
               </div>
-              {(file || folderPath) && (
+              {file && (
                 <Button onClick={startProcessing} className="w-full" disabled={isProcessing}>
-                  Start Processing
+                  Process Excel File
                 </Button>
               )}
             </div>
@@ -153,7 +137,7 @@ const Index = () => {
             <p className="text-muted-foreground text-center">{progress}% Complete</p>
             {isProcessing && (
               <p className="text-center mt-2 text-sm text-muted-foreground">
-                Processing messages...
+                Processing Excel file...
               </p>
             )}
           </Card>
