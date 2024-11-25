@@ -1,7 +1,7 @@
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { MessageStatus } from "@/types/messages";
+import { MessageStatus } from "@/features/messages/types";
 
 interface ReportGeneratorProps {
   statuses: MessageStatus[];
