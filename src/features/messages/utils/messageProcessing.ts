@@ -1,4 +1,4 @@
-import { MessageStatus } from "@/types/messages";
+import { MessageStatus } from "../types";
 
 export const updateMessageStatus = (
   currentStatus: MessageStatus,

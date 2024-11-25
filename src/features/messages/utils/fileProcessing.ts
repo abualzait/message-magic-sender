@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { MessageStatus } from '@/types/messages';
+import { MessageStatus } from "../types";
 
 export const processExcelFile = async (file: File): Promise<MessageStatus[]> => {
   console.log("Processing Excel file:", file.name);

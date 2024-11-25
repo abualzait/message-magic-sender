@@ -3,12 +3,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { FileUploader } from "@/components/FileUploader";
-import { StatusTable } from "@/components/StatusTable";
-import { ProcessingStatus } from "@/components/ProcessingStatus";
-import { MessageStatus } from "@/types/messages";
-import { wsService } from "@/services/websocket";
-import { processExcelFile } from "@/utils/fileProcessing";
+import { FileUploader } from "@/features/messages/components/FileUploader";
+import { StatusTable } from "@/features/messages/components/StatusTable";
+import { ProcessingStatus } from "@/features/messages/components/ProcessingStatus";
+import { MessageStatus } from "@/features/messages/types";
+import { wsService } from "@/features/messages/services/websocket";
+import { processExcelFile } from "@/features/messages/utils/fileProcessing";
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);

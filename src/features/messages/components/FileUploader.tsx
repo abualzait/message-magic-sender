@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Card } from "./ui/card";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {

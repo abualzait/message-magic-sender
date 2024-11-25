@@ -1,5 +1,5 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { MessageStatus } from "@/types/messages";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MessageStatus } from "../types";
 
 interface StatusTableProps {
   statuses: MessageStatus[];

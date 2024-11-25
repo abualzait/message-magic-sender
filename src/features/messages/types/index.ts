@@ -1,3 +1,4 @@
+// Move from src/types/messages.ts
 export interface MessageStatus {
   phoneNumber: string;
   status: 'pending' | 'sent' | 'failed' | 'retry';
