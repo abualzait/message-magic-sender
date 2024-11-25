@@ -4,4 +4,5 @@ export interface MessageStatus {
   timestamp: string;
   retries: number;
   message: string;
+  errorReason?: string;
 }

@@ -8,6 +8,7 @@ import { FileUploader } from "@/components/FileUploader";
 import { StatusTable } from "@/components/StatusTable";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { MessageStatus } from "@/types/messages";
+import { updateMessageStatus, processApiResponse } from "@/utils/messageProcessing";
 import * as XLSX from 'xlsx';
 
 const Index = () => {
@@ -31,11 +32,10 @@ const Index = () => {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(firstSheet);
         
-        // Match the Python backend's column names
         const statuses: MessageStatus[] = rows.map((row: any) => ({
-          phoneNumber: row.mobile_number?.toString() || '',  // Match Python's mobile_number
-          message: row.msg_body || '',                       // Match Python's msg_body
-          status: row.status?.toLowerCase() || 'pending',
+          phoneNumber: row.mobile_number?.toString() || '',
+          message: row.msg_body || '',
+          status: 'pending',
           timestamp: new Date().toISOString(),
           retries: 0
         }));
@@ -58,22 +58,35 @@ const Index = () => {
         body: JSON.stringify({ filePath }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to trigger Python script');
-      }
-
-      const result = await response.json();
+      const result = await processApiResponse(response);
       console.log("Python script response:", result);
+
+      // Update message statuses based on the response
+      if (result.statuses) {
+        setMessageStatuses(prevStatuses => 
+          prevStatuses.map(status => {
+            const updatedStatus = result.statuses[status.phoneNumber];
+            if (updatedStatus) {
+              return updateMessageStatus(
+                status,
+                updatedStatus.status,
+                updatedStatus.error
+              );
+            }
+            return status;
+          })
+        );
+      }
       
       toast({
-        title: "WhatsApp Processing Started",
-        description: "The Python script has been triggered to send WhatsApp messages.",
+        title: "WhatsApp Processing Complete",
+        description: "Messages have been processed. Check the status table for details.",
       });
     } catch (error) {
       console.error("Error triggering Python script:", error);
       toast({
         title: "Error",
-        description: "Failed to trigger the Python script. Please run it manually.",
+        description: error instanceof Error ? error.message : "Failed to process messages",
         variant: "destructive",
       });
     }
@@ -105,41 +118,24 @@ const Index = () => {
     
     try {
       const statuses = await processExcelFile(file);
-      let processed = 0;
+      setMessageStatuses(statuses);
       
-      for (const status of statuses) {
-        processed++;
-        const progress = Math.round((processed / statuses.length) * 100);
-        setProgress(progress);
-        
-        setMessageStatuses(prev => [...prev, {
-          ...status,
-          status: 'pending',
-          timestamp: new Date().toISOString()
-        }]);
-      }
-
-      // Save the file and trigger Python script
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('http://localhost:5000/upload', {
+      const uploadResponse = await fetch('http://localhost:5000/upload', {
         method: 'POST',
         body: formData
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      const { filePath } = await response.json();
+      const { filePath } = await processApiResponse(uploadResponse);
       await triggerPythonScript(filePath);
 
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
         title: "Error",
-        description: "Failed to process file",
+        description: error instanceof Error ? error.message : "Failed to process file",
         variant: "destructive",
       });
     } finally {
