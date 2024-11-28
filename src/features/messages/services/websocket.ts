@@ -1,30 +1,30 @@
+import io from 'socket.io-client';
+
 class WebSocketService {
-  private ws: WebSocket | null = null;
+  private socket: SocketIOClient.Socket | null = null;
   private messageHandlers: ((data: any) => void)[] = [];
 
   connect() {
-    console.log("Connecting to WebSocket server...");
-    this.ws = new WebSocket('ws://localhost:5000/ws');
+    this.socket = io('http://localhost:5000', { transports: ['websocket'] });
 
-    this.ws.onopen = () => {
+    this.socket.on('connect', () => {
       console.log("WebSocket connected successfully");
-    };
+    });
 
-    this.ws.onmessage = (event) => {
-      console.log("WebSocket message received:", event.data);
-      const data = JSON.parse(event.data);
+    this.socket.on('status_update', (data: any) => {
+      console.log("WebSocket message received:", data);
       this.messageHandlers.forEach(handler => handler(data));
-    };
+    });
 
-    this.ws.onerror = (error) => {
+    this.socket.on('error', (error: any) => {
       console.error("WebSocket error:", error);
-    };
+    });
 
-    this.ws.onclose = () => {
+    this.socket.on('disconnect', () => {
       console.log("WebSocket connection closed");
       // Attempt to reconnect after 5 seconds
       setTimeout(() => this.connect(), 5000);
-    };
+    });
   }
 
   addMessageHandler(handler: (data: any) => void) {
@@ -33,6 +33,13 @@ class WebSocketService {
 
   removeMessageHandler(handler: (data: any) => void) {
     this.messageHandlers = this.messageHandlers.filter(h => h !== handler);
+  }
+
+  disconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
   }
 }
 

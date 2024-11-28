@@ -1,17 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>message-magic-sender</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
-    <meta property="og:image" content="/og-image.svg" />
-  </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Magic Sender</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Message Magic Sender</h1>
+        
+        <div class="connection-status">
+            Status: <span id="connection-status">Disconnected</span>
+        </div>
 
-  <body>
-    <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+        <div class="upload-section">
+            <h2>Upload Messages File</h2>
+            <form id="upload-form">
+                <input type="file" id="file-input" accept=".txt,.csv">
+                <button type="submit">Upload</button>
+            </form>
+            <div id="upload-status"></div>
+        </div>
+
+        <div class="messaging-section">
+            <h2>Messages</h2>
+            <div id="messages" class="messages-container"></div>
+            
+            <div class="message-input">
+                <input type="text" id="recipient-id" placeholder="Recipient ID">
+                <input type="text" id="message-input" placeholder="Type your message">
+                <button onclick="sendCustomMessage()">Send</button>
+            </div>
+        </div>
+
+        <div class="status-section">
+            <h2>Processing Status</h2>
+            <div id="processing-status"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>

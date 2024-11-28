@@ -17,27 +17,24 @@ const Index = () => {
   const [messageStatuses, setMessageStatuses] = useState<MessageStatus[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState("");
+  const [logs, setLogs] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     document.title = "Takamol messaging hub";
     wsService.connect();
 
-    wsService.addMessageHandler((data) => {
-      console.log("Processing status update:", data);
+    const handler = (data: any) => {
       if (data.type === 'status_update') {
+        logging(data);
         setMessageStatuses(prevStatuses => {
-          return prevStatuses.map(status => {
-            if (status.phoneNumber === data.phoneNumber) {
-              return {
-                ...status,
-                status: data.status,
-                errorReason: data.error || undefined,
-                timestamp: new Date().toISOString()
-              };
-            }
-            return status;
-          });
+          return [...prevStatuses, {
+            phoneNumber: data.phoneNumber,
+            status: data.status,
+            message: data.message,
+            timestamp: data.timestamp,
+            errorReason: data.error || undefined
+          }];
         });
         setLastUpdate(new Date().toLocaleTimeString());
       } else if (data.type === 'process_complete') {
@@ -47,25 +44,23 @@ const Index = () => {
           description: `Processed ${data.totalMessages} messages`,
         });
       }
-    });
+    };
+
+    wsService.addMessageHandler(handler);
 
     return () => {
-      // Cleanup
+      wsService.removeMessageHandler(handler);
+      wsService.disconnect();
     };
   }, [toast]);
 
   const handleFileUpload = async (uploadedFile: File) => {
-    console.log("File uploaded:", uploadedFile.name);
     setFile(uploadedFile);
     setIsProcessing(true);
-    
     try {
-      const statuses = await processExcelFile(uploadedFile);
-      setMessageStatuses(statuses);
-      
       const formData = new FormData();
       formData.append('file', uploadedFile);
-      
+
       const uploadResponse = await fetch('http://localhost:5000/upload', {
         method: 'POST',
         body: formData
@@ -77,7 +72,7 @@ const Index = () => {
 
       const { filePath } = await uploadResponse.json();
       console.log("File uploaded successfully, path:", filePath);
-      
+
       toast({
         title: "Processing Started",
         description: "Your file is being processed",
@@ -93,11 +88,15 @@ const Index = () => {
     }
   };
 
+  const logging = (data: any) => {
+    setLogs(prevLogs => [...prevLogs, `${data.timestamp} - ${data.phoneNumber}: ${data.message} - ${data.status}`]);
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <h1 className="text-4xl font-bold text-primary">Takamol messaging hub</h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <Card className="p-6">
             <h2 className="text-2xl font-semibold mb-4">Upload File</h2>
@@ -123,6 +122,11 @@ const Index = () => {
         <Card className="p-6">
           <h2 className="text-2xl font-semibold mb-4">Live Message Status</h2>
           <StatusTable statuses={messageStatuses} />
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-2xl font-semibold mb-4">Logs</h2>
+          <pre className="bg-slate-800 text-white p-4 rounded-lg">{logs.join('\n')}</pre>
         </Card>
       </div>
     </div>
